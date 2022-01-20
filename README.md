@@ -4,7 +4,7 @@
     
  - 因为有些 Composer 组件依赖的版本可能过高无法低版本兼容, 欢迎PR帮忙解决
  - 已经经过 AB -N 1000 -N 100 压测测试, 无失败事务, 全可回滚, 数据无异常
- - 实现思路参考 [loyaltylu/tcc-transaction](https://github.com/lizhanfei) 该作者写的
+ - 实现思路参考 [loyaltylu/tcc-transaction](https://github.com/luzzhong/tcc-transaction) 该作者写的
  - 为啥要重写, 因为他使用了太多 `AOP` 并且代码 `可读性较差` 用的不太顺就自己搞了一个
  - 欢迎 `测试` 和 `PR`
     
