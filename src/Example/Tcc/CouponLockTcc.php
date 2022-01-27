@@ -1,8 +1,13 @@
 <?php
 
-
+declare(strict_types=1);
+/**
+ * This is a TCC distributed transaction component.
+ * @link     https://github.com/YogCloud/hyperf-tcc
+ * @document https://github.com/YogCloud/hyperf-tcc/blob/main/README.md
+ * @license  https://github.com/YogCloud/hyperf-tcc/blob/main/LICENSE
+ */
 namespace YogCloud\TccTransaction\Example\Tcc;
-
 
 use YogCloud\TccTransaction\Example\Service\CouponService;
 use YogCloud\TccTransaction\TccOption;
@@ -22,7 +27,7 @@ class CouponLockTcc extends TccOption
         if ($this->couponId <= 0) {
             return null;
         }
-        $service = new CouponService;
+        $service = new CouponService();
         # 获取优惠券
         $coupon = $service->getCoupon($this->couponId);
         # 锁定优惠券
@@ -44,7 +49,7 @@ class CouponLockTcc extends TccOption
         }
 
         # 解锁优惠券
-        $service = new CouponService;
+        $service = new CouponService();
         $service->releaseCoupon($this->couponId);
     }
 }

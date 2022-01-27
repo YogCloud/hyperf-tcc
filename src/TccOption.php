@@ -1,5 +1,12 @@
 <?php
 
+declare(strict_types=1);
+/**
+ * This is a TCC distributed transaction component.
+ * @link     https://github.com/YogCloud/hyperf-tcc
+ * @document https://github.com/YogCloud/hyperf-tcc/blob/main/README.md
+ * @license  https://github.com/YogCloud/hyperf-tcc/blob/main/LICENSE
+ */
 namespace YogCloud\TccTransaction;
 
 use YogCloud\TccTransaction\Util\Di;
@@ -7,51 +14,43 @@ use YogCloud\TccTransaction\Util\Di;
 abstract class TccOption
 {
     /** @var string 返回主键 */
-    protected $key;
-    /** @var string 当前步骤 try, confirm, cancel */
-    protected $step;
-    /** @var Tcc */
-    protected $tcc;
+    protected string $key;
 
-    public function setKey(string $key)
+    /** @var string 当前步骤 try, confirm, cancel */
+    protected string $step;
+
+    protected ?Tcc $tcc;
+
+    public function setKey(string $key): void
     {
         $this->key = $key;
     }
 
-    /**
-     * @return string
-     */
-    public function getKey()
+    public function getKey(): string
     {
         return $this->key;
     }
 
-    public function setStep(string $step)
+    public function setStep(string $step): void
     {
         $this->step = $step;
-        Di::logger()->info('[TCC事务] 任务项 '.get_class($this).'#'.$step);
+        Di::logger()->info('[TCC事务] 任务项 ' . get_class($this) . '#' . $step);
     }
 
-    /**
-     * @return string
-     */
-    public function getStep()
+    public function getStep(): string
     {
         return $this->step;
     }
 
     /**
-     * @param Tcc $tcc
+     * @param $tcc
      */
-    public function setTcc(Tcc $tcc = null)
+    public function setTcc($tcc = null): void
     {
         $this->tcc = $tcc;
     }
 
-    /**
-     * @return string
-     */
-    public function getTcc()
+    public function getTcc(): Tcc
     {
         return $this->tcc;
     }

@@ -1,5 +1,12 @@
 <?php
 
+declare(strict_types=1);
+/**
+ * This is a TCC distributed transaction component.
+ * @link     https://github.com/YogCloud/hyperf-tcc
+ * @document https://github.com/YogCloud/hyperf-tcc/blob/main/README.md
+ * @license  https://github.com/YogCloud/hyperf-tcc/blob/main/LICENSE
+ */
 namespace YogCloud\TccTransaction\Example\Service;
 
 use Hyperf\Database\Query\Expression;
@@ -25,7 +32,7 @@ class GoodsService
         $result = Db::table('tcc_goods')
             ->where('id', $goodsId)
             ->first();
-        if (!$result) {
+        if (! $result) {
             throw new ServiceException('购买商品不存在');
         }
 
@@ -42,7 +49,7 @@ class GoodsService
                 ->update([
                     'lock' => new Expression('`lock` + 1'),
                 ]);
-            if (!$lockResult) {
+            if (! $lockResult) {
                 throw new ServiceException('暂无商品库存');
             }
         });
@@ -58,7 +65,7 @@ class GoodsService
                 ->update([
                     'lock' => new Expression('`lock` - 1'),
                 ]);
-            if (!$lockResult) {
+            if (! $lockResult) {
                 throw new ServiceException('商品恢复库存失败');
             }
         });
@@ -77,7 +84,7 @@ class GoodsService
                     'lock' => new Expression('`lock` - 1'),
                     'sale' => new Expression('`sale` + 1'),
                 ]);
-            if (!$result) {
+            if (! $result) {
                 throw new ServiceException('商品库存扣除失败');
             }
         });
@@ -94,7 +101,7 @@ class GoodsService
                     'lock' => new Expression('`lock` + 1'),
                     'sale' => new Expression('`sale` - 1'),
                 ]);
-            if (!$result) {
+            if (! $result) {
                 throw new ServiceException('商品库存恢复失败');
             }
         });

@@ -1,5 +1,12 @@
 <?php
 
+declare(strict_types=1);
+/**
+ * This is a TCC distributed transaction component.
+ * @link     https://github.com/YogCloud/hyperf-tcc
+ * @document https://github.com/YogCloud/hyperf-tcc/blob/main/README.md
+ * @license  https://github.com/YogCloud/hyperf-tcc/blob/main/LICENSE
+ */
 namespace YogCloud\TccTransaction\Coordinator;
 
 use Hyperf\Contract\StdoutLoggerInterface;
@@ -61,18 +68,18 @@ class TccCoordinator extends AbstractConsumer
     {
         $tccId = (string) $message->getBody();
         $state = $this->getState($tccId);
-        $this->logger->info('[TCC事务管理] 开始处理 '.$tccId);
+        $this->logger->info('[TCC事务管理] 开始处理 ' . $tccId);
 
         if ($state instanceof TccState) {
             // 如果事务未处理完毕则延迟检测
-            if (!$state->tccStatus) {
+            if (! $state->tccStatus) {
                 $this->nsq->publish($this->topic, $tccId, $this->delay);
-                $this->logger->info('[TCC事务管理] 重发未完成 '.$tccId);
+                $this->logger->info('[TCC事务管理] 重发未完成 ' . $tccId);
 
                 return Result::ACK;
             }
 
-            $this->logger->info('[TCC事务管理] 执行状态 '.$tccId.'#'.$state->optionStep);
+            $this->logger->info('[TCC事务管理] 执行状态 ' . $tccId . '#' . $state->optionStep);
 
             // 如果操作失败则回滚
             if ($state->optionStatus) {
@@ -83,21 +90,21 @@ class TccCoordinator extends AbstractConsumer
                     $tcc = new Tcc($tccId, $state);
                     $tcc->runOptionCancel();  // 重试取消
                     $this->delState($tccId);  // 删除记录
-                    $this->logger->info('[TCC事务管理] 回滚成功 '.$tccId);
+                    $this->logger->info('[TCC事务管理] 回滚成功 ' . $tccId);
                 } catch (\Throwable $e) {
                     $this->pushNotify($tccId, $state, $e);   // 推送通知
                     $this->delState($tccId);                 // 删除记录
-                    $this->logger->error('[TCC事务管理] 回滚失败 '.$tccId);
+                    $this->logger->error('[TCC事务管理] 回滚失败 ' . $tccId);
                 }
             }
         } else {
-            $this->logger->info('[TCC事务管理] 无效的状态 '.$tccId);
+            $this->logger->info('[TCC事务管理] 无效的状态 ' . $tccId);
         }
 
         return Result::ACK;
     }
 
-    protected function pushNotify(string $tccId, TccState $state, \Throwable $e)
+    protected function pushNotify(string $tccId, TccState $state, \Throwable $e): void
     {
         foreach ($state->options as $option) {
             $option->setTcc(null);
@@ -106,15 +113,12 @@ class TccCoordinator extends AbstractConsumer
         $this->exception->handle($tccId, $state, $e);
     }
 
-    protected function delState(string $tccId)
+    protected function delState(string $tccId): void
     {
         $this->redis->hDel('tcc', $tccId);
     }
 
-    /**
-     * @return TccState|null
-     */
-    protected function getState(string $tccId)
+    protected function getState(string $tccId): ?TccState
     {
         $state = (string) $this->redis->hGet('tcc', $tccId);
         if ($state) {

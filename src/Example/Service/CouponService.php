@@ -1,5 +1,12 @@
 <?php
 
+declare(strict_types=1);
+/**
+ * This is a TCC distributed transaction component.
+ * @link     https://github.com/YogCloud/hyperf-tcc
+ * @document https://github.com/YogCloud/hyperf-tcc/blob/main/README.md
+ * @license  https://github.com/YogCloud/hyperf-tcc/blob/main/LICENSE
+ */
 namespace YogCloud\TccTransaction\Example\Service;
 
 use Hyperf\DbConnection\Db;
@@ -24,7 +31,7 @@ class CouponService
         $result = Db::table('tcc_coupon')
             ->where('id', $couponId)
             ->first();
-        if (!$result) {
+        if (! $result) {
             throw new ServiceException('优惠券不存在');
         }
 
@@ -42,7 +49,7 @@ class CouponService
                 ->update([
                     'lock' => 1,
                 ]);
-            if (!$lockResult) {
+            if (! $lockResult) {
                 throw new ServiceException('无法使用该优惠券');
             }
         });
@@ -59,7 +66,7 @@ class CouponService
                 ->update([
                     'lock' => 0,
                 ]);
-            if (!$lockResult) {
+            if (! $lockResult) {
                 throw new ServiceException('无法解锁该优惠券');
             }
         });
@@ -77,7 +84,7 @@ class CouponService
                     'status' => 1,
                     'lock' => 0,
                 ]);
-            if (!$result) {
+            if (! $result) {
                 throw new ServiceException('使用优惠券失败');
             }
         });
@@ -95,7 +102,7 @@ class CouponService
                     'status' => 0,
                     'lock' => 1,
                 ]);
-            if (!$result) {
+            if (! $result) {
                 throw new ServiceException('解锁优惠券失败');
             }
         });
