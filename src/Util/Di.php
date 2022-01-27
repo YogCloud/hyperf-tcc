@@ -1,5 +1,12 @@
 <?php
 
+declare(strict_types=1);
+/**
+ * This is a TCC distributed transaction component.
+ * @link     https://github.com/YogCloud/hyperf-tcc
+ * @document https://github.com/YogCloud/hyperf-tcc/blob/main/README.md
+ * @license  https://github.com/YogCloud/hyperf-tcc/blob/main/LICENSE
+ */
 namespace YogCloud\TccTransaction\Util;
 
 use Hyperf\Contract\ConfigInterface;
@@ -17,7 +24,7 @@ class Di
      */
     public static function nsq()
     {
-        return Di::get(Nsq::class);
+        return self::get(Nsq::class);
     }
 
     /**
@@ -25,7 +32,7 @@ class Di
      */
     public static function redis()
     {
-        return Di::get(Redis::class);
+        return self::get(Redis::class);
     }
 
     /**
@@ -33,7 +40,7 @@ class Di
      */
     public static function logger()
     {
-        return Di::get(Di::config('tcc.logger', StdoutLoggerInterface::class));
+        return self::get(self::config('tcc.logger', StdoutLoggerInterface::class));
     }
 
     /**
@@ -41,7 +48,7 @@ class Di
      */
     public static function exception()
     {
-        return Di::get(Di::config('tcc.exception', Handle::class));
+        return self::get(self::config('tcc.exception', Handle::class));
     }
 
     /**
@@ -49,7 +56,7 @@ class Di
      */
     public static function idGenerator()
     {
-        return Di::get(IdGeneratorInterface::class);
+        return self::get(IdGeneratorInterface::class);
     }
 
     /**
@@ -59,11 +66,11 @@ class Di
      */
     public static function config(string $key, $default = null)
     {
-        return Di::get(ConfigInterface::class)->get($key, $default);
+        return self::get(ConfigInterface::class)->get($key, $default);
     }
 
     /**
-     * @return object|mixed
+     * @return mixed|object
      */
     public static function get(string $id)
     {

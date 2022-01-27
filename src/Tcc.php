@@ -1,26 +1,29 @@
 <?php
 
-
+declare(strict_types=1);
+/**
+ * This is a TCC distributed transaction component.
+ * @link     https://github.com/YogCloud/hyperf-tcc
+ * @document https://github.com/YogCloud/hyperf-tcc/blob/main/README.md
+ * @license  https://github.com/YogCloud/hyperf-tcc/blob/main/LICENSE
+ */
 namespace YogCloud\TccTransaction;
 
-use YogCloud\TccTransaction\Exception\TccOptionParamException;
-use YogCloud\TccTransaction\Exception\TccTraceException;
-use YogCloud\TccTransaction\Util\Di;
 use Hyperf\Contract\StdoutLoggerInterface;
 use Hyperf\Redis\Redis;
 use Hyperf\Utils\Parallel;
+use YogCloud\TccTransaction\Exception\ServiceException;
+use YogCloud\TccTransaction\Exception\TccTraceException;
+use YogCloud\TccTransaction\Util\Di;
 
 class Tcc
 {
-    /**
-     * @var string
-     */
-    protected $tccId; # 事务ID
+    protected string $tccId; # 事务ID
 
     /**
      * @var TccState 状态
      */
-    protected $state;
+    protected TccState $state;
 
     /**
      * @var Redis
@@ -34,8 +37,6 @@ class Tcc
 
     /**
      * Tcc constructor.
-     * @param string|null $tccId
-     * @param TccState|null $state
      */
     public function __construct(?string $tccId = null, ?TccState $state = null)
     {
@@ -47,7 +48,7 @@ class Tcc
                 $option->setTcc($this);
             }
         } else {
-            $this->tccId = (string)Di::idGenerator()->generate();
+            $this->tccId = (string) Di::idGenerator()->generate();
             $this->state = new TccState(false, false, 'try');
         }
         $this->redis = Di::redis();
@@ -55,36 +56,38 @@ class Tcc
     }
 
     /**
-     * 增加操作
-     * @param string|integer $key
-     * @param TccOption $tcc
+     * 增加操作.
+     * @param int|string $key
      * @return $this
      */
-    public function tcc($key, TccOption $tcc)
+    public function tcc($key, TccOption $tcc): self
     {
-        $tcc->setKey($key);
+        $tcc->setKey((string) $key);
         $this->state->options[$key] = $tcc;
         return $this;
     }
 
     /**
-     * 依赖关系
+     * 依赖关系.
      * @param array $rely 被依赖主键
      * @return $this
      */
-    public function rely(array $rely)
+    public function rely(array $rely): self
     {
         $this->state->rely = $rely;
         return $this;
     }
 
-    /*
+    /**
      * 开启事务
+     * @throws \Throwable
+     * @throws ServiceException
+     * @throws TccTraceException
      */
     public function begin()
     {
         // 读取编排
-        if (!$this->state->rely) {
+        if (! $this->state->rely) {
             $this->state->rely = [array_keys($this->state->options)];
         }
 
@@ -94,32 +97,25 @@ class Tcc
         $this->bindOptions($this);
 
         try {
-            $this->runOptionTry();      # 开启事务
+            $this->runOptionTry();   # 开启事务
+        } catch (\Throwable $e) {
+            throw new ServiceException($e->getMessage(), $e->getCode());
+        }
+        try {
             $this->runOptionConfirm();  # 确认提交
         } catch (\Throwable $e) {
             $this->runOptionCancel($e);   # 回滚事务
         }
     }
 
-    /**
-     * 绑定操作
-     * @param Tcc|null $tcc
-     */
-    protected function bindOptions(?Tcc $tcc)
-    {
-        foreach ($this->state->options as $option) {
-            $option->setTcc($tcc);
-        }
-    }
-
     /*
      * 执行事务启动操作
      */
-    public function runOptionTry()
+    public function runOptionTry(): void
     {
         // 根据流程编排去执行
         foreach ($this->state->rely as $syncs) {
-            $parallel = new Parallel;
+            $parallel = new Parallel();
             foreach ($syncs as $key) {
                 $parallel->add(function () use ($key) {
                     $option = $this->state->options[$key];
@@ -134,15 +130,15 @@ class Tcc
     /*
      * 执行事务提交操作
      */
-    public function runOptionConfirm()
+    public function runOptionConfirm(): void
     {
         // 根据流程编排去执行
         foreach ($this->state->rely as $syncs) {
-            $parallel = new Parallel;
+            $parallel = new Parallel();
             foreach ($syncs as $key) {
                 $parallel->add(function () use ($key) {
                     $option = $this->state->options[$key];
-                    if ($option->getStep() == 'try') {
+                    if ($option->getStep() === 'try') {
                         $option->confirm();
                         $option->setStep('confirm');
                     }
@@ -158,12 +154,16 @@ class Tcc
     /*
      * 执行事务回滚操作
      */
-    public function runOptionCancel(\Throwable $tryException = null)
+    /**
+     * @throws \Throwable
+     * @throws TccTraceException
+     */
+    public function runOptionCancel(\Throwable $tryException = null): void
     {
         try {
             // 根据流程编排倒序去执行
             foreach (array_reverse($this->state->rely) as $syncs) {
-                $parallel = new Parallel;
+                $parallel = new Parallel();
                 foreach (array_reverse($syncs) as $key) {
                     $parallel->add(function () use ($key) {
                         $option = $this->state->options[$key];
@@ -187,9 +187,8 @@ class Tcc
             // 抛出错误
             if ($tryException) {
                 throw new TccTraceException($tryException, $cancelException);
-            } else {
-                throw $cancelException;
             }
+            throw $cancelException;
         }
 
         // 抛出错误
@@ -198,19 +197,50 @@ class Tcc
         }
     }
 
+    /**
+     * 获取响应参数.
+     * @param null $default
+     * @return null|mixed
+     */
+    public function get(string $key, $default = null)
+    {
+        if (isset($this->state->results[$key])) {
+            return $this->state->results[$key];
+        }
+        foreach ($this->state->options as $option) {
+            if (get_class($option) === $key) {
+                return $this->state->results[$option->getKey()];
+            }
+        }
+        return $default;
+    }
+
+    /**
+     * 绑定操作.
+     */
+    protected function bindOptions(?Tcc $tcc): void
+    {
+        foreach ($this->state->options as $option) {
+            $option->setTcc($tcc);
+        }
+    }
+
     /*
      * 推送消息
      */
-    protected function pushMessage()
+    protected function pushMessage(): void
     {
-        Di::nsq()->publish(Di::config('tcc.nsq_topic', 'tcc'), $this->tccId, Di::config('tcc.nsq_detection_time', 5));
+        try {
+            Di::nsq()->publish(Di::config('tcc.nsq_topic', 'tcc'), $this->tccId, Di::config('tcc.nsq_detection_time', 5));
+        } catch (\Throwable $e) {
+        }
         $this->logger->info('[TCC事务] 推送通知 ' . $this->tccId);
     }
 
     /*
      * 推送状态
      */
-    protected function pushState(bool $tccStatus = false, bool $optionStatus = false, string $optionStep = 'try')
+    protected function pushState(bool $tccStatus = false, bool $optionStatus = false, string $optionStep = 'try'): void
     {
         $this->state->tccStatus = $tccStatus;
         $this->state->optionStatus = $optionStatus;
@@ -234,24 +264,5 @@ class Tcc
 
         $this->redis->hSet('tcc', $this->tccId, $state);
         $this->logger->info('[TCC事务] 推送状态 ' . $optionStep);
-    }
-
-    /**
-     * 获取响应参数
-     * @param string $key
-     * @param null $default
-     * @return mixed|null
-     */
-    public function get($key, $default = null)
-    {
-        if (isset($this->state->results[$key])) {
-            return $this->state->results[$key];
-        }
-        foreach ($this->state->options as $option) {
-            if (get_class($option) == $key) {
-                return $this->state->results[$option->getKey()];
-            }
-        }
-        return $default;
     }
 }
